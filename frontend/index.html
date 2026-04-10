@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task Manager</title>
+
+    <style>
+    body {
+        font-family: Arial;
+        background: linear-gradient(to right, #b7d8b7, #8ecfc3);
+        text-align: center;
+        margin: 0;
+    }
+
+    h1 {
+        color: #1f3a3a;
+    }
+
+    h2 {
+        color: #1f3a3a;
+    }
+
+    input {
+        padding: 10px;
+        margin: 8px;
+        border-radius: 6px;
+        border: 1px solid #666;
+        background-color: #e6f5e6;
+        width: 80%;
+        color: #000;
+    }
+
+    button {
+        padding: 10px 15px;
+        margin: 5px;
+        border: none;
+        border-radius: 6px;
+        background-color: #2f6f9f;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    button:hover {
+        background-color: #1e4f73;
+    }
+
+    .container {
+        background: #cde8ec;
+        padding: 25px;
+        margin: 60px auto;
+        width: 350px;
+        border-radius: 12px;
+        box-shadow: 0px 0px 15px #888;
+    }
+
+    #msg {
+        color: #0a5c2f;
+        font-size: 14px;
+        font-weight: bold;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="auth" class="container">
+    <h1>Welcome</h1>
+
+    <input type="text" id="username" placeholder="Username"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
+
+    <p id="msg"></p>
+</div>
+
+<div id="app" class="container" style="display:none;">
+    <h1>Task Manager</h1>
+
+    <input type="text" id="title" placeholder="Enter title">
+    <input type="text" id="desc" placeholder="Enter description">
+    <button onclick="createTask()">Add Task</button>
+
+    <br><br>
+    <button onclick="loadTasks()">View Tasks</button>
+
+    <h2>Tasks</h2>
+    <ul id="taskList"></ul>
+
+    <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+const API = "http://localhost:5000/api/tasks";
+
+function register() {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+
+    if (!user || !pass) {
+        document.getElementById("msg").innerText = "Enter details!";
+        return;
+    }
+
+    if (localStorage.getItem(user)) {
+        document.getElementById("msg").innerText = "User already exists!";
+    } else {
+        localStorage.setItem(user, pass);
+        document.getElementById("msg").innerText = "Registered successfully!";
+
+        setTimeout(() => {
+            document.getElementById("auth").style.display = "none";
+            document.getElementById("app").style.display = "block";
+        }, 1000);
+    }
+}
+
+function login() {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+
+    const storedPass = localStorage.getItem(user);
+
+    if (storedPass === null) {
+        document.getElementById("msg").innerText = "Please register first!";
+    } else if (storedPass !== pass) {
+        document.getElementById("msg").innerText = "Wrong password!";
+    } else {
+        document.getElementById("msg").innerText = "Login successful!";
+
+        setTimeout(() => {
+            document.getElementById("auth").style.display = "none";
+            document.getElementById("app").style.display = "block";
+        }, 1000);
+    }
+}
+
+function logout() {
+    location.reload();
+}
+
+async function createTask() {
+    const title = document.getElementById("title").value;
+    const description = document.getElementById("desc").value;
+
+    await fetch(API + "/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description })
+    });
+
+    alert("Task added!");
+}
+
+async function loadTasks() {
+    const res = await fetch(API + "/all");
+    const data = await res.json();
+
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
+
+    data.forEach(task => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+            ${task.title} - ${task.status}
+            <button onclick="deleteTask('${task._id}')">Delete</button>
+            <button onclick="updateTask('${task._id}')">Complete</button>
+        `;
+        list.appendChild(li);
+    });
+}
+
+async function deleteTask(id) {
+    await fetch(API + "/delete/" + id, { method: "DELETE" });
+    loadTasks();
+}
+
+async function updateTask(id) {
+    await fetch(API + "/update/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Completed" })
+    });
+    loadTasks();
+}
+</script>
+
+</body>
+</html>
